@@ -1,0 +1,33 @@
+# Environment variables (local development)
+.env
+
+# Build artifacts
+*.mod
+*.a
+*.o
+*.so
+*.syso
+*.sqlite
+*.db
+
+# Test coverage reports
+coverage.txt
+
+# IDE specific files
+.idea/*
+.vscode/*
+
+# Docker Compose volumes
+# (Comment out if not using named volumes)
+mongo-data/
+
+# OS specific temporary files
+*.swp
+*.swo
+
+# Editor temporary/backup files
+*~
+*.bak
+
+# Logs
+*.log
