@@ -2,7 +2,6 @@
 .env
 
 # Build artifacts
-*.mod
 *.a
 *.o
 *.so
