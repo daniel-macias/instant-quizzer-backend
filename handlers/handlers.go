@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -71,16 +72,24 @@ func (h *Handler) GetAllQuizzes(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetQuizByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	// Log the ID for debugging purposes
+	log.Printf("Received ID: %s", params["id"])
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
 
 	var quiz models.Quiz
-	collection := h.Client.Database("quizDB").Collection("quizzes")
+	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&quiz)
+	err = collection.FindOne(ctx, bson.M{"_id": id}).Decode(&quiz)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "Quiz not found", http.StatusNotFound)
 		return
 	}
 
@@ -90,12 +99,20 @@ func (h *Handler) GetQuizByID(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateQuiz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	// Log the ID for debugging purposes
+	log.Printf("Received ID: %s", params["id"])
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
 
 	var quiz models.Quiz
 	_ = json.NewDecoder(r.Body).Decode(&quiz)
 
-	collection := h.Client.Database("quizDB").Collection("quizzes")
+	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -104,7 +121,7 @@ func (h *Handler) UpdateQuiz(w http.ResponseWriter, r *http.Request) {
 		"$set": quiz,
 	}
 
-	_, err := collection.UpdateOne(ctx, filter, update)
+	_, err = collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,13 +133,21 @@ func (h *Handler) UpdateQuiz(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteQuiz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
 
-	collection := h.Client.Database("quizDB").Collection("quizzes")
+	// Log the ID for debugging purposes
+	log.Printf("Received ID: %s", params["id"])
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := collection.DeleteOne(ctx, bson.M{"_id": id})
+	_, err = collection.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -134,17 +159,25 @@ func (h *Handler) DeleteQuiz(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AddResult(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
+
+	// Log the ID for debugging purposes
+	log.Printf("Received ID: %s", params["id"])
+
+	id, err := primitive.ObjectIDFromHex(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
 
 	var newResult models.Result
 	_ = json.NewDecoder(r.Body).Decode(&newResult)
 
-	collection := h.Client.Database("quizDB").Collection("quizzes")
+	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	var quiz models.Quiz
-	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&quiz)
+	err = collection.FindOne(ctx, bson.M{"_id": id}).Decode(&quiz)
 	if err != nil {
 		http.Error(w, "Quiz not found", http.StatusNotFound)
 		return
