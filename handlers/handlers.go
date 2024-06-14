@@ -27,7 +27,7 @@ func (h *Handler) CreateQuiz(w http.ResponseWriter, r *http.Request) {
 	var quiz models.Quiz
 	_ = json.NewDecoder(r.Body).Decode(&quiz)
 
-	collection := h.Client.Database("quizDB").Collection("quizzes")
+	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -37,7 +37,9 @@ func (h *Handler) CreateQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(result)
+	// Extract the ID from the InsertOneResult and include it in the response
+	id := result.InsertedID.(primitive.ObjectID).Hex()
+	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
 func (h *Handler) GetAllQuizzes(w http.ResponseWriter, r *http.Request) {
@@ -110,15 +112,25 @@ func (h *Handler) UpdateQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var quiz models.Quiz
-	_ = json.NewDecoder(r.Body).Decode(&quiz)
+	if err := json.NewDecoder(r.Body).Decode(&quiz); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
 
 	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Create a copy of the quiz document without the _id field
+	updateDoc := bson.M{
+		"quizTitle": quiz.QuizTitle,
+		"questions": quiz.Questions,
+		"results":   quiz.Results,
+	}
+
 	filter := bson.M{"_id": id}
 	update := bson.M{
-		"$set": quiz,
+		"$set": updateDoc,
 	}
 
 	_, err = collection.UpdateOne(ctx, filter, update)
@@ -170,7 +182,10 @@ func (h *Handler) AddResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var newResult models.Result
-	_ = json.NewDecoder(r.Body).Decode(&newResult)
+	if err := json.NewDecoder(r.Body).Decode(&newResult); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
 
 	collection := h.Client.Database("instant_quizzer").Collection("Quizzes")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -189,7 +204,15 @@ func (h *Handler) AddResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	quiz.Results = append(quiz.Results, newResult)
-	_, err = collection.ReplaceOne(ctx, bson.M{"_id": id}, quiz)
+
+	// Create a copy of the quiz document without the _id field
+	updateDoc := bson.M{
+		"quizTitle": quiz.QuizTitle,
+		"questions": quiz.Questions,
+		"results":   quiz.Results,
+	}
+
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updateDoc})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
