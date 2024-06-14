@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/daniel-macias/instant-quizzer-backend/handlers"
+	gorillahandlers "github.com/gorilla/handlers" // Add this import with an alias
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,5 +54,18 @@ func main() {
 	router.HandleFunc("/api/quizzes/{id}", h.DeleteQuiz).Methods("DELETE")
 	router.HandleFunc("/api/quizzes/{id}/results", h.AddResult).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":8000", router))
+	// Add CORS middleware
+	corsObj := gorillahandlers.CORS(
+		gorillahandlers.AllowedOrigins([]string{"*"}),
+		gorillahandlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}),
+		gorillahandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)
+
+	// Get the port from the environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000" // Default to port 8000 if the PORT environment variable is not set
+	}
+
+	log.Fatal(http.ListenAndServe(":"+port, corsObj(router)))
 }
